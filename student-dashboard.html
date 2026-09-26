@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Student Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <h1>Student Dashboard</h1>
+
+    <h2 id="welcomeMessage">Welcome!</h2>
+
+    <p>
+        Manage your college complaints from here.
+    </p>
+
+    <br>
+
+    <button onclick="window.location.href='complaint.html'">
+        Submit Complaint
+    </button>
+
+    <button onclick="window.location.href='my-complaints.html'">
+        My Complaints
+    </button>
+
+    <button id="logoutBtn">
+        Logout
+    </button>
+
+
+    <script type="module">
+
+        import { auth, db } from "./firebase-config.js";
+
+        import {
+            onAuthStateChanged,
+            signOut
+        } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
+
+        import {
+            doc,
+            getDoc
+        } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+
+
+        onAuthStateChanged(auth, async function(user) {
+
+            if (!user) {
+
+                window.location.href =
+                    "student-login.html";
+
+                return;
+            }
+
+
+            try {
+
+                const studentDoc =
+                    await getDoc(
+                        doc(db, "students", user.uid)
+                    );
+
+
+                if (studentDoc.exists()) {
+
+                    const student =
+                        studentDoc.data();
+
+                    document.getElementById(
+                        "welcomeMessage"
+                    ).innerText =
+                        "Welcome, " + student.name + "!";
+
+                } else {
+
+                    document.getElementById(
+                        "welcomeMessage"
+                    ).innerText =
+                        "Welcome, Student!";
+
+                }
+
+
+            } catch (error) {
+
+                console.log(error);
+
+                document.getElementById(
+                    "welcomeMessage"
+                ).innerText =
+                    "Welcome, Student!";
+
+            }
+
+        });
+
+
+        document
+            .getElementById("logoutBtn")
+            .addEventListener("click", async function() {
+
+                await signOut(auth);
+
+                alert("Logged out successfully!");
+
+                window.location.href =
+                    "student-login.html";
+
+            });
+
+    </script>
+
+</body>
+</html>

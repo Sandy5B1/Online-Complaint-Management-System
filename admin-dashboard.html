@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <h1>Admin Dashboard</h1>
+
+    <div id="stats">
+        <h2>Total Complaints: <span id="total">0</span></h2>
+        <h2>Pending: <span id="pending">0</span></h2>
+        <h2>In Progress: <span id="inProgress">0</span></h2>
+        <h2>Resolved: <span id="resolved">0</span></h2>
+    </div>
+
+    <div id="complaintsContainer">
+        <p>Loading complaints...</p>
+    </div>
+
+    <br>
+
+    <button id="logoutBtn">
+        Logout
+    </button>
+
+
+    <script type="module">
+
+        import { auth, db } from "./firebase-config.js";
+
+        import {
+            onAuthStateChanged,
+            signOut
+        } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
+
+        import {
+            collection,
+            getDocs,
+            doc,
+            updateDoc,
+            getDoc
+        } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+
+
+        const container =
+            document.getElementById("complaintsContainer");
+
+
+        onAuthStateChanged(auth, async function(user) {
+
+            if (!user) {
+
+                window.location.href =
+                    "admin-login.html";
+
+                return;
+            }
+
+
+            try {
+
+                // Check whether logged-in user is admin
+
+                const adminDoc =
+                    await getDoc(
+                        doc(db, "admins", user.uid)
+                    );
+
+
+                if (!adminDoc.exists()) {
+
+                    alert("Access denied. Admin account required.");
+
+                    await signOut(auth);
+
+                    window.location.href =
+                        "admin-login.html";
+
+                    return;
+                }
+
+
+                // Get all complaints
+
+                const querySnapshot =
+                    await getDocs(
+                        collection(db, "complaints")
+                    );
+
+
+                let total = 0;
+                let pending = 0;
+                let inProgress = 0;
+                let resolved = 0;
+
+
+                container.innerHTML = "";
+
+
+                if (querySnapshot.empty) {
+
+                    container.innerHTML =
+                        "<p>No complaints found.</p>";
+
+                }
+
+
+                querySnapshot.forEach(function(complaintDoc) {
+
+                    const complaint =
+                        complaintDoc.data();
+
+                    const complaintId =
+                        complaintDoc.id;
+
+
+                    total++;
+
+
+                    if (complaint.status === "Pending") {
+                        pending++;
+                    }
+
+                    if (complaint.status === "In Progress") {
+                        inProgress++;
+                    }
+
+                    if (complaint.status === "Resolved") {
+                        resolved++;
+                    }
+
+
+                    let dateText =
+                        "Date not available";
+
+
+                    if (complaint.createdAt) {
+
+                        dateText =
+                            complaint.createdAt
+                            .toDate()
+                            .toLocaleString();
+
+                    }
+
+
+                    const div =
+                        document.createElement("div");
+
+
+                    div.style.background = "white";
+                    div.style.maxWidth = "700px";
+                    div.style.margin = "20px auto";
+                    div.style.padding = "20px";
+                    div.style.borderRadius = "10px";
+                    div.style.boxShadow =
+                        "0 3px 12px rgba(0,0,0,0.12)";
+                    div.style.textAlign = "left";
+
+
+                    div.innerHTML = `
+
+                        <h2>
+                            ${complaint.title}
+                        </h2>
+
+                        <p>
+                            <strong>Student Email:</strong>
+                            ${complaint.studentEmail || "Not available"}
+                        </p>
+
+                        <p>
+                            <strong>Category:</strong>
+                            ${complaint.category}
+                        </p>
+
+                        <p>
+                            <strong>Description:</strong>
+                            ${complaint.description}
+                        </p>
+
+                        <p>
+                            <strong>Date & Time:</strong>
+                            ${dateText}
+                        </p>
+
+                        <label>
+                            <strong>Status:</strong>
+                        </label>
+
+                        <select id="status-${complaintId}">
+
+                            <option value="Pending"
+                                ${complaint.status === "Pending" ? "selected" : ""}>
+                                Pending
+                            </option>
+
+                            <option value="In Progress"
+                                ${complaint.status === "In Progress" ? "selected" : ""}>
+                                In Progress
+                            </option>
+
+                            <option value="Resolved"
+                                ${complaint.status === "Resolved" ? "selected" : ""}>
+                                Resolved
+                            </option>
+
+                        </select>
+
+                        <br>
+
+                        <button id="update-${complaintId}">
+                            Update Status
+                        </button>
+
+                    `;
+
+
+                    container.appendChild(div);
+
+
+                    document
+                        .getElementById(
+                            `update-${complaintId}`
+                        )
+                        .addEventListener(
+                            "click",
+                            async function() {
+
+                                const newStatus =
+                                    document.getElementById(
+                                        `status-${complaintId}`
+                                    ).value;
+
+
+                                try {
+
+                                    await updateDoc(
+                                        doc(
+                                            db,
+                                            "complaints",
+                                            complaintId
+                                        ),
+                                        {
+                                            status: newStatus
+                                        }
+                                    );
+
+
+                                    alert(
+                                        "Complaint status updated!"
+                                    );
+
+
+                                    location.reload();
+
+
+                                } catch (error) {
+
+                                    alert(
+                                        "Update failed: "
+                                        + error.message
+                                    );
+
+                                }
+
+                            }
+                        );
+
+                });
+
+
+                document.getElementById("total")
+                    .innerText = total;
+
+                document.getElementById("pending")
+                    .innerText = pending;
+
+                document.getElementById("inProgress")
+                    .innerText = inProgress;
+
+                document.getElementById("resolved")
+                    .innerText = resolved;
+
+
+            } catch (error) {
+
+                container.innerHTML =
+                    "<p>Unable to load complaints.</p>";
+
+                alert(
+                    "Error: " + error.message
+                );
+
+            }
+
+        });
+
+
+        document
+            .getElementById("logoutBtn")
+            .addEventListener("click", async function() {
+
+                await signOut(auth);
+
+                alert("Admin logged out!");
+
+                window.location.href =
+                    "admin-login.html";
+
+            });
+
+    </script>
+
+</body>
+</html>

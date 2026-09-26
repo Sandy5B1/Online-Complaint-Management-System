@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Submit Complaint</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <h1>Submit Complaint</h1>
+
+    <form id="complaintForm">
+
+        <select id="category" required>
+            <option value="">Select Category</option>
+            <option value="Academic">Academic</option>
+            <option value="Hostel">Hostel</option>
+            <option value="Transport">Transport</option>
+            <option value="Library">Library</option>
+            <option value="Canteen">Canteen</option>
+            <option value="Other">Other</option>
+        </select>
+
+        <input
+            type="text"
+            id="title"
+            placeholder="Complaint Title"
+            required
+        >
+
+        <textarea
+            id="description"
+            placeholder="Describe your complaint"
+            rows="6"
+            required
+        ></textarea>
+
+        <button type="submit">Submit Complaint</button>
+
+    </form>
+
+    <br>
+
+    <button onclick="window.location.href='student-dashboard.html'">
+        Back to Dashboard
+    </button>
+
+
+    <script type="module">
+
+        import { auth, db } from "./firebase-config.js";
+
+        import {
+            addDoc,
+            collection,
+            serverTimestamp
+        } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+
+
+        document
+            .getElementById("complaintForm")
+            .addEventListener("submit", async function(event) {
+
+                event.preventDefault();
+
+
+                const user = auth.currentUser;
+
+
+                if (!user) {
+
+                    alert("Please login first.");
+
+                    window.location.href = "student-login.html";
+
+                    return;
+                }
+
+
+                const category =
+                    document.getElementById("category").value;
+
+                const title =
+                    document.getElementById("title").value;
+
+                const description =
+                    document.getElementById("description").value;
+
+
+                try {
+
+                    await addDoc(
+                        collection(db, "complaints"),
+                        {
+
+                            studentId: user.uid,
+
+                            studentEmail: user.email,
+
+                            category: category,
+
+                            title: title,
+
+                            description: description,
+
+                            status: "Pending",
+
+                            createdAt: serverTimestamp()
+
+                        }
+                    );
+
+
+                    alert("Complaint submitted successfully!");
+
+                    window.location.href =
+                        "my-complaints.html";
+
+
+                } catch (error) {
+
+                    alert(
+                        "Complaint submission failed: "
+                        + error.message
+                    );
+
+                }
+
+            });
+
+    </script>
+
+</body>
+</html>
